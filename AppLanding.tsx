@@ -25,35 +25,39 @@ const AppLanding: React.FC = () => {
 
   const handleStartClick = () => {
     // Store 도메인으로 리다이렉트
-    // 1. 환경 변수에서 가져오기 (Vercel에서 설정)
-    // 2. 없으면 현재 도메인 기반으로 store 서브도메인 자동 생성
-    // 3. 최종 기본값 사용
     const envStoreUrl = import.meta.env.VITE_STORE_URL;
+    const currentHost = window.location.host;
+    const currentProtocol = window.location.protocol;
     
     let storeUrl = envStoreUrl;
     
+    // 환경 변수가 없으면 자동 감지
     if (!storeUrl) {
-      // 현재 도메인 기반으로 store 서브도메인 생성
-      const currentHost = window.location.host;
-      const currentProtocol = window.location.protocol;
-      
-      // localhost나 IP 주소인 경우
-      if (currentHost.includes('localhost') || currentHost.includes('127.0.0.1') || currentHost.match(/^\d+\.\d+\.\d+\.\d+/)) {
-        // 개발 환경: 포트 3001로 이동
-        storeUrl = `${currentProtocol}//${currentHost.replace(':3000', ':3001')}`;
-      } else {
-        // 프로덕션 환경: store 서브도메인 생성
-        // areum.com -> store.areum.com
-        // areum-landing.vercel.app -> areum-store.vercel.app
-        if (currentHost.includes('vercel.app')) {
-          storeUrl = currentHost.replace('landing', 'store');
-          if (storeUrl === currentHost) {
-            // landing이 없는 경우 store 추가
-            storeUrl = currentHost.replace('.vercel.app', '-store.vercel.app');
-          }
-          storeUrl = `${currentProtocol}//${storeUrl}`;
+      // 개발 환경 (localhost)
+      if (currentHost.includes('localhost') || currentHost.includes('127.0.0.1')) {
+        const port = currentHost.includes(':') ? currentHost.split(':')[1] : '';
+        if (port === '3000' || !port) {
+          storeUrl = `${currentProtocol}//localhost:3001`;
         } else {
-          // 일반 도메인: store 서브도메인
+          // 다른 포트에서 실행 중인 경우 포트만 변경
+          const baseHost = currentHost.split(':')[0];
+          storeUrl = `${currentProtocol}//${baseHost}:3001`;
+        }
+      }
+      // Vercel 프로덕션 환경
+      else if (currentHost.includes('vercel.app')) {
+        // areum-landing.vercel.app -> areum-store.vercel.app
+        if (currentHost.includes('landing')) {
+          storeUrl = `${currentProtocol}//${currentHost.replace('landing', 'store')}`;
+        } else {
+          // landing이 없으면 -store 추가
+          storeUrl = `${currentProtocol}//${currentHost.replace('.vercel.app', '-store.vercel.app')}`;
+        }
+      }
+      // 일반 도메인
+      else {
+        // areum.com -> store.areum.com
+        if (!currentHost.startsWith('store.')) {
           const parts = currentHost.split('.');
           if (parts.length >= 2) {
             const domain = parts.slice(-2).join('.');
@@ -61,15 +65,22 @@ const AppLanding: React.FC = () => {
           } else {
             storeUrl = `${currentProtocol}//store.${currentHost}`;
           }
+        } else {
+          // 이미 store 도메인에 있는 경우 (이상한 경우)
+          alert('이미 Store 페이지에 있습니다.');
+          return;
         }
       }
     }
     
-    // 최종 기본값
+    // URL이 생성되지 않았으면 기본값 사용하지 않고 안내 메시지 표시
     if (!storeUrl) {
-      storeUrl = 'https://store.areum.com';
+      alert('Store URL을 찾을 수 없습니다. Vercel 환경 변수에 VITE_STORE_URL을 설정해주세요.');
+      return;
     }
     
+    // URL로 이동
+    console.log('Store로 이동:', storeUrl);
     window.location.href = storeUrl;
   };
 
