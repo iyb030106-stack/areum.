@@ -38,23 +38,63 @@ const Shop: React.FC<ShopProps> = ({ onBack }) => {
   const [selectedCategory, setSelectedCategory] = useState('전체');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   
-  // Auth State
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [users, setUsers] = useState<UserData[]>([]); // "Database" of users
-  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
+  // Auth State - Load from localStorage on mount
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    const saved = localStorage.getItem('areum_isLoggedIn');
+    return saved === 'true';
+  });
+  const [users, setUsers] = useState<UserData[]>(() => {
+    const saved = localStorage.getItem('areum_users');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [currentUser, setCurrentUser] = useState<UserData | null>(() => {
+    const saved = localStorage.getItem('areum_currentUser');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  
+  // Save users to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('areum_users', JSON.stringify(users));
+  }, [users]);
+  
+  // Save login state and current user to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('areum_isLoggedIn', isLoggedIn.toString());
+    if (currentUser) {
+      localStorage.setItem('areum_currentUser', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('areum_currentUser');
+    }
+  }, [isLoggedIn, currentUser]);
 
   // Search State
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Cart & Checkout State
-  const [cart, setCart] = useState<CartItem[]>([]);
+  // Cart & Checkout State - Load from localStorage
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    const saved = localStorage.getItem('areum_cart');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [checkoutItems, setCheckoutItems] = useState<CartItem[]>([]);
   const [checkoutSource, setCheckoutSource] = useState<'detail' | 'cart'>('detail');
   
-  // Wishlist State
-  const [wishlist, setWishlist] = useState<number[]>([]);
+  // Wishlist State - Load from localStorage
+  const [wishlist, setWishlist] = useState<number[]>(() => {
+    const saved = localStorage.getItem('areum_wishlist');
+    return saved ? JSON.parse(saved) : [];
+  });
+  
+  // Save cart to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('areum_cart', JSON.stringify(cart));
+  }, [cart]);
+  
+  // Save wishlist to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('areum_wishlist', JSON.stringify(wishlist));
+  }, [wishlist]);
   
   // Checkout Form State
   const [shippingInfo, setShippingInfo] = useState({
@@ -430,14 +470,23 @@ const Shop: React.FC<ShopProps> = ({ onBack }) => {
         address: signupForm.address
     };
 
-    setUsers([...users, newUser]);
+    const updatedUsers = [...users, newUser];
+    setUsers(updatedUsers);
     
-    // Success flow - don't login immediately
+    // Auto login after signup
+    setIsLoggedIn(true);
+    setCurrentUser(newUser);
     setAuthError('');
     setSignupForm({ name: '', email: '', password: '', confirmPassword: '', phone: '', address: '' });
     
-    showToastNotification('회원가입이 완료되었습니다. 로그인해주세요.');
-    setShopView('login');
+    // Navigate to appropriate view
+    if (selectedProduct) {
+        setShopView('detail');
+    } else {
+        setShopView('listing');
+    }
+    
+    showToastNotification('회원가입이 완료되었습니다. 로그인되었습니다.');
   };
 
   // Effect to toggle address fields in Checkout
@@ -479,6 +528,14 @@ const Shop: React.FC<ShopProps> = ({ onBack }) => {
     setIsLoggedIn(false);
     setCurrentUser(null);
     setShowLogoutConfirm(false);
+    // Clear user-related localStorage (keep cart and wishlist for convenience)
+    localStorage.removeItem('areum_isLoggedIn');
+    localStorage.removeItem('areum_currentUser');
+    // Optionally clear cart and wishlist on logout (uncomment if needed)
+    // localStorage.removeItem('areum_cart');
+    // localStorage.removeItem('areum_wishlist');
+    // setCart([]);
+    // setWishlist([]);
     // Optionally redirect to listing
     // setShopView('listing'); 
   };
