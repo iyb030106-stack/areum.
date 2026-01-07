@@ -5,8 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:landing": "vite --mode landing",
+    "dev:store": "vite --mode store",
     "build": "vite build",
-    "preview": "vite preview"
+    "build:landing": "vite build --mode landing && node scripts/rename-html.mjs landing",
+    "build:store": "vite build --mode store && node scripts/rename-html.mjs store",
+    "build:all": "npm run build:landing && npm run build:store",
+    "preview": "vite preview",
+    "preview:landing": "vite preview --outDir dist-landing",
+    "preview:store": "vite preview --outDir dist-store --port 3001"
   },
   "dependencies": {
     "react": "^19.2.3",

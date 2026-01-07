@@ -1,0 +1,14 @@
+{
+  "buildCommand": "npm run build:landing",
+  "outputDirectory": "dist-landing",
+  "devCommand": "npm run dev:landing",
+  "installCommand": "npm install",
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
+

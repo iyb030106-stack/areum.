@@ -1,0 +1,14 @@
+{
+  "buildCommand": "npm run build:store",
+  "outputDirectory": "dist-store",
+  "devCommand": "npm run dev:store",
+  "installCommand": "npm install",
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
+

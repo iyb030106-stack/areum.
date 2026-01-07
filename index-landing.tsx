@@ -1,5 +1,3 @@
-// 기본 진입점은 랜딩페이지입니다
-// Store를 사용하려면 index-store.tsx를 사용하세요
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import AppLanding from './AppLanding';
@@ -15,3 +13,4 @@ root.render(
     <AppLanding />
   </React.StrictMode>
 );
+
