@@ -82,3 +82,5 @@ Store 프로젝트가 배포되어 있는지 확인하세요:
    - 예: `https://areum-store.vercel.app` (올바름)
    - 예: `areum-store.vercel.app` (잘못됨, 프로토콜 없음)
 
+
+

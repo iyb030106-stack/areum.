@@ -67,15 +67,36 @@ const Shop: React.FC<ShopProps> = ({ onBack }) => {
       localStorage.removeItem('areum_currentUser');
     }
   }, [isLoggedIn, currentUser]);
+  
+  // Load user's cart when user logs in
+  useEffect(() => {
+    if (isLoggedIn && currentUser) {
+      const userCart = localStorage.getItem(`areum_cart_${currentUser.email}`);
+      if (userCart) {
+        setCart(JSON.parse(userCart));
+      } else {
+        setCart([]);
+      }
+    } else if (!isLoggedIn) {
+      // 로그아웃 시 장바구니 초기화
+      setCart([]);
+    }
+  }, [isLoggedIn, currentUser]);
 
   // Search State
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Cart & Checkout State - Load from localStorage
+  // Cart & Checkout State - Load from localStorage (user-specific)
   const [cart, setCart] = useState<CartItem[]>(() => {
-    const saved = localStorage.getItem('areum_cart');
-    return saved ? JSON.parse(saved) : [];
+    // 로그인된 사용자가 있으면 해당 사용자의 장바구니 불러오기
+    const saved = localStorage.getItem('areum_currentUser');
+    if (saved) {
+      const user = JSON.parse(saved);
+      const userCart = localStorage.getItem(`areum_cart_${user.email}`);
+      return userCart ? JSON.parse(userCart) : [];
+    }
+    return [];
   });
   const [checkoutItems, setCheckoutItems] = useState<CartItem[]>([]);
   const [checkoutSource, setCheckoutSource] = useState<'detail' | 'cart'>('detail');
@@ -86,10 +107,13 @@ const Shop: React.FC<ShopProps> = ({ onBack }) => {
     return saved ? JSON.parse(saved) : [];
   });
   
-  // Save cart to localStorage whenever it changes
+  // Save cart to localStorage whenever it changes (user-specific)
   useEffect(() => {
-    localStorage.setItem('areum_cart', JSON.stringify(cart));
-  }, [cart]);
+    if (currentUser && isLoggedIn) {
+      // 로그인된 사용자의 장바구니만 저장
+      localStorage.setItem(`areum_cart_${currentUser.email}`, JSON.stringify(cart));
+    }
+  }, [cart, currentUser, isLoggedIn]);
   
   // Save wishlist to localStorage whenever it changes
   useEffect(() => {
@@ -391,6 +415,14 @@ const Shop: React.FC<ShopProps> = ({ onBack }) => {
         setAuthError('');
         setLoginForm({ email: '', password: '' });
         
+        // 관리자 장바구니 불러오기
+        const adminCart = localStorage.getItem(`areum_cart_${adminUser.email}`);
+        if (adminCart) {
+            setCart(JSON.parse(adminCart));
+        } else {
+            setCart([]);
+        }
+        
         if (selectedProduct) {
             setShopView('detail');
         } else {
@@ -408,6 +440,14 @@ const Shop: React.FC<ShopProps> = ({ onBack }) => {
         setCurrentUser(userFound);
         setAuthError('');
         setLoginForm({ email: '', password: '' });
+        
+        // 로그인한 사용자의 장바구니 불러오기
+        const userCart = localStorage.getItem(`areum_cart_${userFound.email}`);
+        if (userCart) {
+            setCart(JSON.parse(userCart));
+        } else {
+            setCart([]); // 장바구니가 없으면 빈 배열
+        }
         
         // Navigation logic
         if (selectedProduct) {
@@ -479,6 +519,9 @@ const Shop: React.FC<ShopProps> = ({ onBack }) => {
     setAuthError('');
     setSignupForm({ name: '', email: '', password: '', confirmPassword: '', phone: '', address: '' });
     
+    // 새 사용자는 빈 장바구니로 시작
+    setCart([]);
+    
     // Navigate to appropriate view
     if (selectedProduct) {
         setShopView('detail');
@@ -525,17 +568,15 @@ const Shop: React.FC<ShopProps> = ({ onBack }) => {
   };
 
   const handleLogout = () => {
+    // 로그아웃 시 장바구니 초기화
+    setCart([]);
     setIsLoggedIn(false);
     setCurrentUser(null);
     setShowLogoutConfirm(false);
-    // Clear user-related localStorage (keep cart and wishlist for convenience)
+    // Clear user-related localStorage
     localStorage.removeItem('areum_isLoggedIn');
     localStorage.removeItem('areum_currentUser');
-    // Optionally clear cart and wishlist on logout (uncomment if needed)
-    // localStorage.removeItem('areum_cart');
-    // localStorage.removeItem('areum_wishlist');
-    // setCart([]);
-    // setWishlist([]);
+    // 장바구니는 사용자별로 저장되어 있으므로 삭제하지 않음 (다시 로그인하면 복원됨)
     // Optionally redirect to listing
     // setShopView('listing'); 
   };

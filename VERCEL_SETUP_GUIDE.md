@@ -93,3 +93,5 @@
 - [ ] Store: Output Directory = `dist-store`
 - [ ] 두 프로젝트가 **다른 이름**으로 생성됨
 
+
+

@@ -111,3 +111,5 @@ VITE_LANDING_URL=https://areum.com
   - 랜딩페이지: `dist-landing/`
   - Store: `dist-store/`
 
+
+
