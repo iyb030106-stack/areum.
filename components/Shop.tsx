@@ -1809,7 +1809,6 @@ const Shop: React.FC<ShopProps> = ({ onBack }) => {
                   </div>
                 </div>
               ))}
-                ))}
               </div>
             ) : (
               <div className="text-center py-12 text-stone-400">
