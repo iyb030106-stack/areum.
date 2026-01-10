@@ -1,12 +1,12 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { ArrowLeft, Search, ShoppingBag, Heart, SlidersHorizontal, Star, Truck, ShieldCheck, X, Trash2, CreditCard, CheckCircle2, Minus, Plus, User, Lock, Mail, MapPin, Phone, LogOut, Camera, BarChart3, Package, Users, MessageSquare, ShoppingCart, Clock, Settings, Edit, Trash } from 'lucide-react';
+import { ArrowLeft, Search, ShoppingBag, Heart, SlidersHorizontal, Star, Truck, ShieldCheck, X, Trash2, CreditCard, CheckCircle2, Minus, Plus, User, Lock, Mail, MapPin, Phone, LogOut, Camera } from 'lucide-react';
 
 interface ShopProps {
   onBack: () => void;
 }
 
 type Gender = 'women' | 'men';
-type ShopView = 'listing' | 'detail' | 'cart' | 'checkout' | 'success' | 'login' | 'signup' | 'admin';
+type ShopView = 'listing' | 'detail' | 'cart' | 'checkout' | 'success' | 'login' | 'signup';
 
 interface Product {
   id: number;
@@ -32,14 +32,6 @@ interface UserData {
   address: string;
 }
 
-// Visitor/User Session Tracking
-interface VisitorSession {
-  email: string | null;
-  startTime: number;
-  lastActivity: number;
-  pageViews: number;
-}
-
 // Order Interface
 interface Order {
   id: string;
@@ -58,19 +50,6 @@ interface Order {
   status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
 }
 
-// Customer Service Inquiry
-interface CSInquiry {
-  id: string;
-  userId: string;
-  userEmail: string;
-  userName: string;
-  subject: string;
-  message: string;
-  createdAt: number;
-  status: 'pending' | 'responded' | 'resolved';
-  response?: string;
-  respondedAt?: number;
-}
 
 const Shop: React.FC<ShopProps> = ({ onBack }) => {
   const [shopView, setShopView] = useState<ShopView>('listing');
@@ -190,88 +169,16 @@ const Shop: React.FC<ShopProps> = ({ onBack }) => {
   // Check if current user is admin
   const isAdmin = currentUser?.email === 'areum1004@gmail.com';
   
-  // Admin: Visitor Tracking State
-  const [visitorSessions, setVisitorSessions] = useState<VisitorSession[]>(() => {
-    const saved = localStorage.getItem('areum_visitorSessions');
-    return saved ? JSON.parse(saved) : [];
-  });
-  
-  // Admin: Orders State
+  // Orders State (for order history - not admin dashboard)
   const [orders, setOrders] = useState<Order[]>(() => {
     const saved = localStorage.getItem('areum_orders');
     return saved ? JSON.parse(saved) : [];
   });
   
-  // Admin: CS Inquiries State
-  const [csInquiries, setCsInquiries] = useState<CSInquiry[]>(() => {
-    const saved = localStorage.getItem('areum_csInquiries');
-    return saved ? JSON.parse(saved) : [];
-  });
-  
-  // Admin: Product Management State
-  const [newProduct, setNewProduct] = useState<Partial<Product>>({
-    gender: 'women',
-    category: '',
-    name: '',
-    price: 0,
-    originalPrice: 0,
-    image: '',
-    brand: ''
-  });
-  
-  // Admin: Current Visitor Session
-  const [currentSession, setCurrentSession] = useState<VisitorSession | null>(null);
-  
-  // Track visitor session
-  useEffect(() => {
-    const session: VisitorSession = {
-      email: currentUser?.email || null,
-      startTime: Date.now(),
-      lastActivity: Date.now(),
-      pageViews: 1
-    };
-    setCurrentSession(session);
-    
-    // Update last activity every 30 seconds
-    const activityInterval = setInterval(() => {
-      setCurrentSession(prev => prev ? { ...prev, lastActivity: Date.now() } : null);
-    }, 30000);
-    
-    return () => clearInterval(activityInterval);
-  }, [currentUser]);
-  
-  // Save visitor session when it changes
-  useEffect(() => {
-    if (currentSession) {
-      const sessions = [...visitorSessions];
-      const existingIndex = sessions.findIndex(s => 
-        s.email === currentSession.email && 
-        Date.now() - s.lastActivity < 300000 // 5분 이내 활동
-      );
-      
-      if (existingIndex >= 0) {
-        sessions[existingIndex] = {
-          ...sessions[existingIndex],
-          lastActivity: currentSession.lastActivity,
-          pageViews: sessions[existingIndex].pageViews + 1
-        };
-      } else {
-        sessions.push(currentSession);
-      }
-      
-      setVisitorSessions(sessions);
-      localStorage.setItem('areum_visitorSessions', JSON.stringify(sessions));
-    }
-  }, [currentSession?.lastActivity]);
-  
-  // Save orders and CS inquiries to localStorage
+  // Save orders to localStorage
   useEffect(() => {
     localStorage.setItem('areum_orders', JSON.stringify(orders));
   }, [orders]);
-  
-  useEffect(() => {
-    localStorage.setItem('areum_csInquiries', JSON.stringify(csInquiries));
-  }, [csInquiries]);
 
   // Categories
   const womenCategories = ['전체', '아우터', '셔츠/블라우스', '팬츠', '스커트', '원피스'];
@@ -1410,347 +1317,6 @@ const Shop: React.FC<ShopProps> = ({ onBack }) => {
     </div>
   );
 
-  // Admin Dashboard View
-  const renderAdmin = () => {
-    const activeVisitors = visitorSessions.filter(v => Date.now() - v.lastActivity < 300000); // 5분 이내 활동
-    const totalVisitors = visitorSessions.length;
-    const totalOrders = orders.length;
-    const pendingOrders = orders.filter(o => o.status === 'pending').length;
-    const totalRevenue = orders.reduce((sum, o) => sum + o.totalAmount, 0);
-    const pendingCS = csInquiries.filter(cs => cs.status === 'pending').length;
-    
-    // Calculate average session time
-    const avgSessionTime = visitorSessions.length > 0
-      ? visitorSessions.reduce((sum, v) => sum + (v.lastActivity - v.startTime), 0) / visitorSessions.length / 1000 / 60
-      : 0;
-    
-    return (
-      <div className="min-h-screen bg-[#FDFBF7] pb-20">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-stone-800 mb-2">관리자 대시보드</h1>
-          <p className="text-stone-500">Store 관리 및 데이터 확인</p>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm text-stone-500">현재 접속자</h3>
-              <Users className="text-orange-500" size={20} />
-            </div>
-            <p className="text-3xl font-bold text-stone-800">{activeVisitors.length}</p>
-            <p className="text-xs text-stone-400 mt-1">전체: {totalVisitors}명</p>
-          </div>
-          
-          <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm text-stone-500">주문 건수</h3>
-              <ShoppingCart className="text-blue-500" size={20} />
-            </div>
-            <p className="text-3xl font-bold text-stone-800">{totalOrders}</p>
-            <p className="text-xs text-stone-400 mt-1">대기: {pendingOrders}건</p>
-          </div>
-          
-          <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm text-stone-500">총 매출</h3>
-              <BarChart3 className="text-green-500" size={20} />
-            </div>
-            <p className="text-3xl font-bold text-stone-800">₩{totalRevenue.toLocaleString()}</p>
-            <p className="text-xs text-stone-400 mt-1">평균 세션: {avgSessionTime.toFixed(1)}분</p>
-          </div>
-          
-          <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm text-stone-500">고객 상담</h3>
-              <MessageSquare className="text-red-500" size={20} />
-            </div>
-            <p className="text-3xl font-bold text-stone-800">{csInquiries.length}</p>
-            <p className="text-xs text-stone-400 mt-1">대기: {pendingCS}건</p>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="bg-white rounded-xl border border-stone-200 shadow-sm">
-          <div className="border-b border-stone-200 flex gap-4 px-6">
-            <button 
-              onClick={() => setShopView('admin')}
-              className="py-4 px-2 border-b-2 border-orange-500 text-orange-500 font-bold text-sm"
-            >
-              대시보드
-            </button>
-          </div>
-          
-          <div className="p-6">
-            {/* Active Visitors */}
-            <div className="mb-8">
-              <h2 className="text-xl font-bold text-stone-800 mb-4 flex items-center gap-2">
-                <Users size={20} />
-                현재 접속자 ({activeVisitors.length}명)
-              </h2>
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {activeVisitors.length > 0 ? (
-                  activeVisitors.map((visitor, idx) => {
-                    const sessionMinutes = Math.floor((visitor.lastActivity - visitor.startTime) / 1000 / 60);
-                    return (
-                      <div key={idx} className="flex items-center justify-between p-3 bg-stone-50 rounded-lg">
-                        <div>
-                          <p className="font-medium text-stone-800">{visitor.email || '비회원'}</p>
-                          <p className="text-xs text-stone-500">접속 시간: {sessionMinutes}분 | 조회수: {visitor.pageViews}</p>
-                        </div>
-                        <Clock size={16} className="text-stone-400" />
-                      </div>
-                    );
-                  })
-                ) : (
-                  <p className="text-stone-400 text-center py-4">현재 접속자가 없습니다.</p>
-                )}
-              </div>
-            </div>
-
-            {/* Orders */}
-            <div className="mb-8">
-              <h2 className="text-xl font-bold text-stone-800 mb-4 flex items-center gap-2">
-                <ShoppingCart size={20} />
-                주문 관리 ({orders.length}건)
-              </h2>
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {orders.length > 0 ? (
-                  orders.slice().reverse().map((order) => (
-                    <div key={order.id} className="p-4 bg-stone-50 rounded-lg border border-stone-200">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <p className="font-bold text-stone-800">{order.id}</p>
-                          <p className="text-sm text-stone-600">{order.userName} ({order.userEmail})</p>
-                          <p className="text-xs text-stone-500">{new Date(order.orderDate).toLocaleString('ko-KR')}</p>
-                        </div>
-                        <select 
-                          value={order.status}
-                          onChange={(e) => {
-                            const updated = orders.map(o => 
-                              o.id === order.id ? { ...o, status: e.target.value as Order['status'] } : o
-                            );
-                            setOrders(updated);
-                          }}
-                          className="px-3 py-1 text-xs rounded-lg border border-stone-200 bg-white"
-                        >
-                          <option value="pending">대기중</option>
-                          <option value="processing">처리중</option>
-                          <option value="shipped">배송중</option>
-                          <option value="delivered">배송완료</option>
-                          <option value="cancelled">취소됨</option>
-                        </select>
-                      </div>
-                      <div className="mt-2 pt-2 border-t border-stone-200">
-                        <p className="text-xs text-stone-600 mb-1">주문 상품: {order.items.length}개</p>
-                        <p className="text-sm font-bold text-orange-600">총액: ₩{order.totalAmount.toLocaleString()}</p>
-                        <p className="text-xs text-stone-500 mt-1">배송지: {order.shippingInfo.address}</p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-stone-400 text-center py-4">주문이 없습니다.</p>
-                )}
-              </div>
-            </div>
-
-            {/* Registered Users */}
-            <div className="mb-8">
-              <h2 className="text-xl font-bold text-stone-800 mb-4 flex items-center gap-2">
-                <User size={20} />
-                회원 목록 ({users.length}명)
-              </h2>
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {users.length > 0 ? (
-                  users.map((user, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 bg-stone-50 rounded-lg">
-                      <div>
-                        <p className="font-medium text-stone-800">{user.name}</p>
-                        <p className="text-xs text-stone-500">{user.email} | {user.phone}</p>
-                        <p className="text-xs text-stone-400">{user.address}</p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-stone-400 text-center py-4">등록된 회원이 없습니다.</p>
-                )}
-              </div>
-            </div>
-
-            {/* Product Management */}
-            <div className="mb-8">
-              <h2 className="text-xl font-bold text-stone-800 mb-4 flex items-center gap-2">
-                <Package size={20} />
-                상품 관리
-              </h2>
-              <div className="bg-stone-50 p-4 rounded-lg">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="block text-xs text-stone-500 mb-1">성별</label>
-                    <select 
-                      value={newProduct.gender}
-                      onChange={(e) => setNewProduct({...newProduct, gender: e.target.value as Gender})}
-                      className="w-full p-2 border border-stone-200 rounded-lg bg-white"
-                    >
-                      <option value="women">여성</option>
-                      <option value="men">남성</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-stone-500 mb-1">카테고리</label>
-                    <input 
-                      type="text"
-                      value={newProduct.category}
-                      onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
-                      className="w-full p-2 border border-stone-200 rounded-lg bg-white"
-                      placeholder="아우터, 셔츠 등"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-stone-500 mb-1">상품명</label>
-                    <input 
-                      type="text"
-                      value={newProduct.name}
-                      onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
-                      className="w-full p-2 border border-stone-200 rounded-lg bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-stone-500 mb-1">브랜드</label>
-                    <input 
-                      type="text"
-                      value={newProduct.brand}
-                      onChange={(e) => setNewProduct({...newProduct, brand: e.target.value})}
-                      className="w-full p-2 border border-stone-200 rounded-lg bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-stone-500 mb-1">일일 대여료 (원)</label>
-                    <input 
-                      type="number"
-                      value={newProduct.price}
-                      onChange={(e) => setNewProduct({...newProduct, price: parseInt(e.target.value) || 0})}
-                      className="w-full p-2 border border-stone-200 rounded-lg bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-stone-500 mb-1">원가 (원)</label>
-                    <input 
-                      type="number"
-                      value={newProduct.originalPrice}
-                      onChange={(e) => setNewProduct({...newProduct, originalPrice: parseInt(e.target.value) || 0})}
-                      className="w-full p-2 border border-stone-200 rounded-lg bg-white"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-xs text-stone-500 mb-1">이미지 URL</label>
-                    <input 
-                      type="text"
-                      value={newProduct.image}
-                      onChange={(e) => setNewProduct({...newProduct, image: e.target.value})}
-                      className="w-full p-2 border border-stone-200 rounded-lg bg-white"
-                      placeholder="https://..."
-                    />
-                  </div>
-                </div>
-                <button 
-                  onClick={() => {
-                    if (!newProduct.name || !newProduct.category || !newProduct.price) {
-                      showToastNotification('필수 항목을 입력해주세요.');
-                      return;
-                    }
-                    const maxId = products.length > 0 ? Math.max(...products.map(p => p.id)) : 0;
-                    const addedProduct: Product = {
-                      id: maxId + 1,
-                      gender: newProduct.gender || 'women',
-                      category: newProduct.category || '',
-                      name: newProduct.name || '',
-                      price: newProduct.price || 0,
-                      originalPrice: newProduct.originalPrice || 0,
-                      image: newProduct.image || '',
-                      brand: newProduct.brand || ''
-                    };
-                    setProducts([...products, addedProduct]);
-                    setNewProduct({
-                      gender: 'women',
-                      category: '',
-                      name: '',
-                      price: 0,
-                      originalPrice: 0,
-                      image: '',
-                      brand: ''
-                    });
-                    showToastNotification('상품이 추가되었습니다.');
-                  }}
-                  className="w-full bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg font-bold"
-                >
-                  상품 추가
-                </button>
-              </div>
-            </div>
-
-            {/* CS Management */}
-            <div>
-              <h2 className="text-xl font-bold text-stone-800 mb-4 flex items-center gap-2">
-                <MessageSquare size={20} />
-                고객 상담 ({csInquiries.length}건)
-              </h2>
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {csInquiries.length > 0 ? (
-                  csInquiries.slice().reverse().map((inquiry) => (
-                    <div key={inquiry.id} className="p-4 bg-stone-50 rounded-lg border border-stone-200">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <p className="font-bold text-stone-800">{inquiry.subject}</p>
-                          <p className="text-sm text-stone-600">{inquiry.userName} ({inquiry.userEmail})</p>
-                          <p className="text-xs text-stone-500">{new Date(inquiry.createdAt).toLocaleString('ko-KR')}</p>
-                        </div>
-                        <span className={`px-2 py-1 text-xs rounded ${
-                          inquiry.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                          inquiry.status === 'responded' ? 'bg-blue-100 text-blue-800' :
-                          'bg-green-100 text-green-800'
-                        }`}>
-                          {inquiry.status === 'pending' ? '대기중' : inquiry.status === 'responded' ? '답변완료' : '해결완료'}
-                        </span>
-                      </div>
-                      <p className="text-sm text-stone-700 mb-2">{inquiry.message}</p>
-                      {inquiry.response && (
-                        <div className="mt-2 pt-2 border-t border-stone-200">
-                          <p className="text-xs text-stone-500 mb-1">답변:</p>
-                          <p className="text-sm text-stone-700">{inquiry.response}</p>
-                        </div>
-                      )}
-                      {inquiry.status === 'pending' && (
-                        <button
-                          onClick={() => {
-                            const response = prompt('답변을 입력하세요:');
-                            if (response) {
-                              const updated = csInquiries.map(cs =>
-                                cs.id === inquiry.id
-                                  ? { ...cs, status: 'responded' as const, response, respondedAt: Date.now() }
-                                  : cs
-                              );
-                              setCsInquiries(updated);
-                              showToastNotification('답변이 등록되었습니다.');
-                            }
-                          }}
-                          className="mt-2 px-4 py-2 bg-orange-500 text-white rounded-lg text-sm hover:bg-orange-600"
-                        >
-                          답변하기
-                        </button>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-stone-400 text-center py-4">고객 상담 문의가 없습니다.</p>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-stone-800 pb-20 relative">
@@ -1814,7 +1380,6 @@ const Shop: React.FC<ShopProps> = ({ onBack }) => {
                     }
                     else if (shopView === 'checkout') setShopView(checkoutSource);
                     else if (shopView === 'success') setShopView('listing');
-                    else if (shopView === 'admin') setShopView('listing');
                     else setShopView('listing');
                 }}
                 className="p-2 -ml-2 text-stone-400 hover:text-stone-800 hover:bg-stone-100 rounded-full transition-colors"
@@ -1833,26 +1398,15 @@ const Shop: React.FC<ShopProps> = ({ onBack }) => {
             {!isSearchOpen && (
                 <div className="hidden md:flex mr-2 items-center gap-2">
                     {isLoggedIn ? (
-                        <>
-                            {isAdmin && (
-                                <button 
-                                    onClick={() => setShopView('admin')}
-                                    className="text-xs bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded-lg font-bold flex items-center gap-1"
-                                >
-                                    <Settings size={12} />
-                                    관리자
-                                </button>
-                            )}
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs text-stone-500">
-                                    <span className="text-stone-800 font-bold">{currentUser?.name}</span>님
-                                </span>
-                                <button onClick={() => setShowLogoutConfirm(true)} className="text-xs text-stone-400 hover:text-stone-800 px-2 py-1 flex items-center gap-1">
-                                    <LogOut size={12} />
-                                    로그아웃
-                                </button>
-                            </div>
-                        </>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs text-stone-500">
+                                <span className="text-stone-800 font-bold">{currentUser?.name}</span>님
+                            </span>
+                            <button onClick={() => setShowLogoutConfirm(true)} className="text-xs text-stone-400 hover:text-stone-800 px-2 py-1 flex items-center gap-1">
+                                <LogOut size={12} />
+                                로그아웃
+                            </button>
+                        </div>
                     ) : (
                         <button onClick={() => setShopView('login')} className="text-xs text-orange-500 hover:text-orange-600 font-bold px-2 py-1">
                             로그인
@@ -1907,7 +1461,6 @@ const Shop: React.FC<ShopProps> = ({ onBack }) => {
         {shopView === 'success' && renderSuccess()}
         {shopView === 'login' && renderLogin()}
         {shopView === 'signup' && renderSignUp()}
-        {shopView === 'admin' && isAdmin && renderAdmin()}
       </main>
     </div>
   );
