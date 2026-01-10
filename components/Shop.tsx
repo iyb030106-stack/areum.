@@ -234,6 +234,7 @@ const Shop: React.FC<ShopProps> = ({ onBack }) => {
   });
 
   const [adminTab, setAdminTab] = useState<'dashboard' | 'products' | 'orders' | 'cs' | 'users' | 'analytics'>('dashboard');
+  const [adminProductFilter, setAdminProductFilter] = useState<{ gender: Gender | 'all'; category: string }>({ gender: 'all', category: '전체' });
 
   // Save admin data to localStorage
   useEffect(() => {
@@ -1680,15 +1681,100 @@ const Shop: React.FC<ShopProps> = ({ onBack }) => {
         )}
 
         {/* Products Tab - 상품 등록/수정 */}
-        {adminTab === 'products' && (
+        {adminTab === 'products' && (() => {
+          // 필터링된 상품 목록
+          const filteredAdminProducts = products.filter(product => {
+            const genderMatch = adminProductFilter.gender === 'all' || product.gender === adminProductFilter.gender;
+            const categoryMatch = adminProductFilter.category === '전체' || product.category === adminProductFilter.category;
+            return genderMatch && categoryMatch;
+          });
+
+          // 모든 카테고리 목록 (중복 제거)
+          const allCategories = Array.from(new Set(products.map(p => p.category))).sort();
+
+          return (
           <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
-            <h2 className="text-xl font-bold text-stone-800 mb-4 flex items-center gap-2">
-              <Package size={20} />
-              상품 관리
-            </h2>
-            <p className="text-stone-500 mb-6">총 {products.length}개의 상품이 등록되어 있습니다.</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {products.slice(0, 12).map(product => (
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-stone-800 flex items-center gap-2">
+                <Package size={20} />
+                상품 관리
+              </h2>
+              <div className="text-sm text-stone-500">
+                총 {products.length}개 중 {filteredAdminProducts.length}개 표시
+              </div>
+            </div>
+
+            {/* 필터 */}
+            <div className="mb-6 flex flex-wrap gap-3 items-center">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-stone-600">성별:</span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setAdminProductFilter(prev => ({ ...prev, gender: 'all' }))}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                      adminProductFilter.gender === 'all'
+                        ? 'bg-stone-800 text-white'
+                        : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                    }`}
+                  >
+                    전체
+                  </button>
+                  <button
+                    onClick={() => setAdminProductFilter(prev => ({ ...prev, gender: 'women' }))}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                      adminProductFilter.gender === 'women'
+                        ? 'bg-stone-800 text-white'
+                        : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                    }`}
+                  >
+                    여성
+                  </button>
+                  <button
+                    onClick={() => setAdminProductFilter(prev => ({ ...prev, gender: 'men' }))}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                      adminProductFilter.gender === 'men'
+                        ? 'bg-stone-800 text-white'
+                        : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                    }`}
+                  >
+                    남성
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-stone-600">카테고리:</span>
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    onClick={() => setAdminProductFilter(prev => ({ ...prev, category: '전체' }))}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                      adminProductFilter.category === '전체'
+                        ? 'bg-stone-800 text-white'
+                        : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                    }`}
+                  >
+                    전체
+                  </button>
+                  {allCategories.map(cat => (
+                    <button
+                      key={cat}
+                      onClick={() => setAdminProductFilter(prev => ({ ...prev, category: cat }))}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                        adminProductFilter.category === cat
+                          ? 'bg-stone-800 text-white'
+                          : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* 상품 그리드 */}
+            {filteredAdminProducts.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredAdminProducts.map(product => (
                 <div key={product.id} className="border border-stone-200 rounded-lg p-4">
                   <div className="aspect-[3/4] bg-stone-100 rounded-lg mb-3 overflow-hidden">
                     <img src={product.image} alt={product.name} className="w-full h-full object-contain p-2" />
@@ -1723,14 +1809,22 @@ const Shop: React.FC<ShopProps> = ({ onBack }) => {
                   </div>
                 </div>
               ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-stone-400">
+                <Package size={48} className="mx-auto mb-4 opacity-50" />
+                <p>선택한 필터에 해당하는 상품이 없습니다.</p>
+              </div>
+            )}
+
             <button
               onClick={() => {
                 // 상품 추가 로직 (간단한 예시)
                 const newProduct: Product = {
                   id: Math.max(...products.map(p => p.id), 0) + 1,
-                  gender: 'women',
-                  category: '전체',
+                  gender: adminProductFilter.gender === 'all' ? 'women' : adminProductFilter.gender,
+                  category: adminProductFilter.category === '전체' ? '아우터' : adminProductFilter.category,
                   name: `새 상품 ${Date.now()}`,
                   price: 3000,
                   originalPrice: 100000,
@@ -1745,7 +1839,8 @@ const Shop: React.FC<ShopProps> = ({ onBack }) => {
               + 새 상품 추가
             </button>
           </div>
-        )}
+          );
+        })()}
 
         {/* Orders Tab - 주문 관리 */}
         {adminTab === 'orders' && (
